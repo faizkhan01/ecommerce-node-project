@@ -1,32 +1,54 @@
-const express = require("express");
-const router = express.Router();
-const Products = require("../models/productSchema");
-const {
-  AuthenticateToken,
-  AuthenticateAdminRole,
-} = require("../middleware/authMiddleWare");
-router.use(express.json());
+var express = require('express');
+var router = express.Router();
+var Products = require('../models/productsSchema');
+const checkLoginUser = require('../middlewares/checkLoginUser');
+const checkRole = require('../middlewares/checkingRole');
+const axios = require("axios");
+// Get products 
+router.get('/',
+    checkLoginUser,
+    async (req, res, next) => {
+        try {
+            // Find all products from database
+            const products = await Products.find();
+            res.status(200).json(products);
+        } catch (error) {
+            res.status(500).send(error);
+        }
+    });
 
-// All Products List, Open For All
 
-router.get("/", AuthenticateToken, (req, res) => {
-  Products.find()
-    .then((data) => res.json(data))
-    .catch((err) => res.json(err));
-});
-
-//Add Products, Admin And Super Admin Can Access
-
+// Post products
 router.post(
-  "/add-product",
-  AuthenticateToken,
-  AuthenticateAdminRole,
-  (req, res) => {
-    const newProducts = new Products(req.body);
-    newProducts
-      .save()
-      .then((data) => res.json(data))
-      .catch((err) => res.json(err));
-  }
-);
+    '/add-product',
+    checkLoginUser,
+    checkRole.checkSuperAdmin,
+    async (req, res, next) => {
+        try {
+            // create products object
+            const productsDetails = new Products(req.body);
+            // save products in database
+            const addProducts = await productsDetails.save();
+            console.log('successfully added products');
+            res.status(200).json(addProducts);
+
+        } catch (error) {
+            res.status(500).send(error);
+        }
+    });
+
+// generate-products
+router.post('/generate-products',
+    checkLoginUser,
+    checkRole.checkSuperAdmin,
+    async (req, res, next) => {
+        try {
+            const getProducts = await axios.get("https://fakestoreapi.com/products");
+            const products = await Products.insertMany(getProducts.data);
+            res.status(200).send(products);
+        } catch (error) {
+            res.status(500).send(error.message);
+        }
+    })
+
 module.exports = router;

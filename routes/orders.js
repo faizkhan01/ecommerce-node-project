@@ -1,71 +1,73 @@
-// Maintain All order related Endpoints
+var express = require('express');
+var router = express.Router();
+var orderModule = require('../models/orderSchema');
+var productsModule = require('../models/productsSchema');
+const checkLoginUser = require('../middlewares/checkLoginUser');
+const checkRole = require('../middlewares/checkingRole');
 
-const express = require("express");
-const router = express.Router();
-const Orders = require("../models/orderSchema");
-const {
-  AuthenticateToken,
-  AuthenticateAdminRole,
-  AuthenticateSuperAdminRole,
-} = require("../middleware/authMiddleWare");
-const { route } = require("./users");
-router.use(express.json());
 
-// All Orders, only Super Admin Can Access
+/* GET All orders. */
+router.get('/',
+    checkLoginUser,
+    checkRole.checkSuperAdmin,
+    async (req, res, next) => {
+        try {
+            // find all orders from database
+            const orders = await orderModule.find()
+            res.status(200).json(orders)
 
-router.get("/", AuthenticateToken, AuthenticateSuperAdminRole, (req, res) => {
-  Orders.find({})
-    .then((data) => res.json(data))
-    .catch((err) => res.send(err.message));
-});
+        } catch (error) {
+            res.status(500).send(error)
+        }
 
-// Make a new Order, Anyone can access after Login
+    });
 
-router.post("/make-order", AuthenticateToken, (req, res) => {
-  const newOrder = new Orders(req.body);
-  newOrder
-    .save()
-    .then((data) => res.json(data))
-    .catch((err) => res.send(err.message));
-});
+// Post order in database
+router.post('/make-order',
+    checkLoginUser,
+    checkRole.checkUser,
+    async (req, res, next) => {
+        try {
+            // create order object
+            const orderDetails = new orderModule({
+                ...req.body,
+                userId: req.userId
+            })
+            await orderDetails.save()
+            res.status(200).send('Ordered Successfully')
+        } catch (error) {
+            res.status(500).send(error)
+        }
+    });
 
-// Updating Order Status, Admin and Super Admin Can access
+// patch order status
+router.patch('/update-status',
+    checkLoginUser,
+    checkRole.checkAdmin,
+    async (req, res, next) => {
+        try {
+            const orderId = req.body.orderId;
+            const status = req.body.status;
+            // Find order by order Id and update order status
+            await orderModule.findByIdAndUpdate(orderId, { status })
+            res.status(205).send('order status updated successfully')
+        } catch (error) {
+            res.status(500).send(error)
+        }
+    });
 
-router.patch(
-  "/update-status",
-  AuthenticateToken,
-  AuthenticateAdminRole,
-  (req, res) => {
-    Orders.findByIdAndUpdate(req.body.id, { status: req.body.status })
-      .then((data) => res.status(200).send("Successfully updated order"))
-      .catch((err) => res.send(err.message));
-  }
-);
-
-// List Of all pending Orders, Admin and Super Admin Can access
-
-router.get(
-  "/pending-orders",
-  AuthenticateToken,
-  AuthenticateAdminRole,
-  (req, res) => {
-    Orders.find({ status: "pending" })
-      .then((data) => res.json(data))
-      .catch((err) => res.send(err.message));
-  }
-);
-
-// Get Oders By Date, Only Super Admin Can Access
-
-router.get(
-  "/daily-orders",
-  AuthenticateToken,
-  AuthenticateSuperAdminRole,
-  (req, res) => {
-    Orders.find({ date: req.body.date })
-      .then((data) => res.json(data))
-      .catch((err) => res.send(err.message));
-  }
-);
+// Get pending orders 
+router.get('/pending-orders',
+    checkLoginUser,
+    checkRole.checkAdmin,
+    async (req, res, next) => {
+        try {
+            // Find pending order from database 
+            const pendingOrders = await orderModule.find({ 'status': 'pending' })
+            res.status(200).json(pendingOrders)
+        } catch (error) {
+            res.status(500).send(error)
+        }
+    });
 
 module.exports = router;

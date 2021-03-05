@@ -1,30 +1,31 @@
-const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
-const orderSchema = new Schema({
-  productId: {
-    type: String,
-    required: true,
-  },
-  userId: {
-    type: String,
-    required: true,
-  },
-  quantity: {
-    type: Number,
-    required: true,
-  },
-  date: {
-    type: String,
-    default: new Date().toLocaleDateString(),
-  },
-  time: {
-    type: String,
-    default: new Date().toLocaleTimeString(),
-  },
-  status: {
-    type: String,
-    required: true,
-  },
-});
+const mongoose = require('mongoose');
 
-module.exports = mongoose.model("orders", orderSchema);
+// define order Schema
+const orderSchema = new mongoose.Schema({
+    productId: {
+        type: String,
+        required: true,
+        index: true,
+    },
+    quantity: {
+        type: Number,
+        required: true
+    },
+    userId: {
+        type: String,
+        required: true
+    },
+    status: {
+        type: String,
+        default: 'pending',
+        index: true,
+    },
+    date: {
+        type: Date,
+        default: Date.now,
+        index: true,
+    },
+})
+
+const orderModel = mongoose.model('orders', orderSchema);
+module.exports = orderModel;

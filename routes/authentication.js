@@ -1,33 +1,42 @@
-const express = require("express");
-const router = express.Router();
-const Users = require("../models/userSchema");
-const jwt = require("jsonwebtoken");
-require("dotenv").config();
-router.use(express.json());
+var express = require('express');
+var router = express.Router();
+var usersModule = require('../models/userSchema');
+const bcrypt = require('bcrypt');
+var jwt = require('jsonwebtoken');
+require('dotenv').config();
 
-//Login Endpoint
+// Post user email and password for login
+router.get('/login', async (req, res, next) => {
+    try {
+        const email = req.body.email;
+        let password = req.body.password;
+        // Find user by user email 
+        const findUser = await usersModule.findOne({ email });
+        if (findUser === null) {
+            res.status(403).send('Please send valid email');
+        } else {
+            const getId = findUser._id;
+            const getPassword = findUser.password;
+            // check user password and compare 
+            if (bcrypt.compareSync(password, getPassword)) {
 
-router.post("/login", (req, res) => {
-  const name = req.body.name;
-  const password = req.body.password;
-  Users.findOne({ name: name, password: password })
-    .then((user) => {
-      if (user == null) {
-        res.status(401).send("Incorrect Username or Password");
-      }
-      console.log();
-      const token = generateToken(user);
-      res.status(200).json({ accessToken: token });
-    })
-    .catch((err) => {
-      res.status(401).send(err.message);
-    });
+                // Set jwt token in cookie
+                var token = jwt.sign({ userId: getId, role: findUser.role }, process.env.SECRET_TOKEN);
+                res.cookie("jwt", token);
+                res.status(202).send(`login successfully as: ${findUser.role}`);
+            } else {
+                res.status(403).send('your Password is not valid');
+            }
+        }
+    } catch (error) {
+        res.status(500).send(error);
+    }
 });
 
-// Generate User Token
-
-const generateToken = (user) => {
-  return jwt.sign(JSON.stringify(user), process.env.SECRET_TOKEN);
-};
+/* GET logout  */
+router.get('/logout', (req, res, next) => {
+    res.clearCookie('jwt');
+    res.status(202).send('logout successfully');
+});
 
 module.exports = router;

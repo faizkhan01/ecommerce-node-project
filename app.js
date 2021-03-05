@@ -1,38 +1,47 @@
-const express = require("express");
-const cookieParser = require("cookie-parser");
-const usersRouter = require("./routes/users");
-const productsRouter = require("./routes/products");
-const orderRouter = require("./routes/orders");
-const authenticationRouter = require("./routes/authentication");
+var createError = require('http-errors');
+var express = require('express');
+var path = require('path');
+var cookieParser = require('cookie-parser');
+var logger = require('morgan');
 
-// Database Connection Object
-const { connectDB } = require('./db/dbConnection');
+// require all routes from routes folder
+var usersRouter = require('./routes/users');
+var authenticationRouter = require('./routes/authentication');
+var productsRouter =require('./routes/products');
+var ordersRouter =require('./routes/orders')
 
-const app = express();
+// database connection
+const connect = require("./db/dbConnection");
+
+
+var app = express();
+
+app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
 
-//Route Configuration
+// set all api
+app.use('/', authenticationRouter);
+app.use('/users', usersRouter);
+app.use('/products',productsRouter);
+app.use('/orders',ordersRouter)
 
-app.use("/", authenticationRouter);
-app.use("/users", usersRouter);
-app.use("/products", productsRouter);
-app.use("/orders", orderRouter);
-
-//Database Connection
-
-connectDB();
-
-//Handle Unknown Path
-app.use((req, res, next) => {
-  res.status(404).send("Not found");
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+  next(createError(404));
 });
 
 // error handler
+app.use(function(err, req, res, next) {
+  // set locals, only providing error in development
+  res.locals.message = err.message;
+  res.locals.error = req.app.get('env') === 'development' ? err : {};
 
-app.use(function (err, req, res, next) {
-  res.status(err.status || 500).send(err.message || err);
+  // render the error page
+  res.status(err.status || 500);
+  res.render('error');
 });
 
 module.exports = app;

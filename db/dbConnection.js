@@ -1,20 +1,22 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
+require('dotenv').config()
 
-const mongoDB =  `http://localhost:27017/e-shop`;
+mongoose.connect(process.env.CONNECTION_URL, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    useCreateIndex: true,
+    useFindAndModify: false,
+  })
+  .catch((err) => {
+    console.log(err.message);
+  });
 
-// Connecting database
-module.exports.connectDB = async () => {
-    try {
-        await mongoose.connect(
-            mongoDB,
-            {
-                useNewUrlParser: true,
-                useUnifiedTopology: true,
-                useFindAndModify: false,
-                useCreateIndex: true
-            },
-            () => console.log('database connected successfully'))
-    } catch (err) {
-        console.error(err)
-    }
-};
+const db = mongoose.connection;
+
+db.on("error", (error) => {
+  console.log(error);
+});
+db.once("open", () => {
+  console.log("Database successfully connected");
+});
+module.exports = mongoose;
